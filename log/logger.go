@@ -10,8 +10,10 @@ import (
 )
 
 var (
-	logger  Logger
-	logLock sync.RWMutex
+	logLock    sync.RWMutex
+	loggers    = make(map[string]Logger)
+	global     Logger
+	initialize bool
 )
 
 var levelMap = map[string]zapcore.Level{
@@ -21,9 +23,20 @@ var levelMap = map[string]zapcore.Level{
 	"error": zapcore.ErrorLevel,
 }
 
-type Config struct {
-	Level          string
-	LogFileName    string
+type GlobalConfig struct {
+	Level       string
+	LogFileName string
+	ConfigBase
+}
+
+type ChildConfig struct {
+	LoggerName  string
+	Level       string
+	LogFileName string
+	ConfigBase
+}
+
+type ConfigBase struct {
 	MaxSize        int
 	MaxBackups     int
 	MaxAge         int
@@ -49,36 +62,26 @@ type Logger interface {
 	Debugf(fmt string, args ...interface{})
 }
 
-func init() {
-	zapLoggerConfig := zap.NewDevelopmentConfig()
-	zapLoggerEncoderConfig := zapcore.EncoderConfig{
-		TimeKey:        "time",
-		LevelKey:       "level",
-		NameKey:        "logger",
-		CallerKey:      "caller",
-		MessageKey:     "msg",
-		StacktraceKey:  "stacktrace",
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.CapitalLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
-		EncodeDuration: zapcore.SecondsDurationEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
-		EncodeName:     zapcore.FullNameEncoder,
-	}
-	zapLoggerConfig.EncoderConfig = zapLoggerEncoderConfig
-	zapLogger, _ := zapLoggerConfig.Build(zap.AddCaller())
-	SetLogger(&BaseLogger{zapLogger.Sugar()})
-}
-
 // InitLogger is init global logger
-func InitLogger(config Config) (err error) {
+func InitLogger(config GlobalConfig, childConfig ...ChildConfig) {
 	logLock.Lock()
 	defer logLock.Unlock()
-	logger, err = initLogger(config)
-	return
+	initLogger(config)
+	initialize = true
+	initChildLoggers(childConfig...)
 }
 
-func initLogger(config Config) (Logger, error) {
+func AddChildLogger(config ...ChildConfig) {
+	logLock.Lock()
+	defer logLock.Unlock()
+	if initialize {
+		initChildLoggers(config...)
+		return
+	}
+	panic("your should init global logger first! Please call InitLogger() first")
+}
+
+func initLogger(config GlobalConfig) {
 	logLevel := getLogLevel(config.Level)
 	encoderConfig := getEncoderConfig()
 	var encoder zapcore.Encoder
@@ -94,7 +97,28 @@ func initLogger(config Config) (Logger, error) {
 	if config.ShowLineNumber {
 		zapLogger = zapLogger.WithOptions(zap.AddCaller())
 	}
-	return &BaseLogger{zapLogger.Sugar()}, nil
+	zap.ReplaceGlobals(zapLogger)
+	global = &BaseLogger{zapLogger.Sugar()}
+}
+
+func initChildLoggers(childs ...ChildConfig) {
+	for _, config := range childs {
+		logLevel := getLogLevel(config.Level)
+		encoderConfig := getEncoderConfig()
+		var encoder zapcore.Encoder
+		if config.JSONFormat {
+			encoder = zapcore.NewJSONEncoder(encoderConfig)
+		} else {
+			encoder = zapcore.NewConsoleEncoder(encoderConfig)
+		}
+		hook := getHooks(config.LogFileName, config.MaxSize, config.MaxBackups, config.MaxAge, config.Compress)
+		childCore := zapcore.NewCore(encoder, zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(&hook)), logLevel)
+		child := zap.L().With(zap.String("childLogName", config.LoggerName))
+		child = child.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
+			return childCore
+		}))
+		loggers[config.LoggerName] = &BaseLogger{child.Sugar()}
+	}
 }
 
 func getLogLevel(level string) zapcore.Level {
@@ -131,15 +155,14 @@ func getHooks(fileName string, maxSize, maxBackups, maxAge int, compress bool) l
 	}
 }
 
-//SetLogger sets logger for sdk
-func SetLogger(log Logger) {
-	logLock.Lock()
-	defer logLock.Unlock()
-	logger = log
-}
-
 func GetLogger() Logger {
 	logLock.RLock()
 	defer logLock.RUnlock()
-	return logger
+	return global
+}
+
+func GetLoggerWithName(name string) Logger {
+	logLock.RLock()
+	defer logLock.RUnlock()
+	return loggers[name]
 }
