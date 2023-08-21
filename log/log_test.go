@@ -1,6 +1,7 @@
 package log
 
 import (
+	"go.uber.org/zap"
 	"testing"
 )
 
@@ -26,6 +27,9 @@ func TestLogger(t *testing.T) {
 	}
 	InitLogger(config, kafka)
 
-	GetLogger().Info("this is global logger")
-	GetLoggerWithName("kafka").Info("this is kafka logger")
+	Info("test", zap.String("trace", "aaa"), zap.Int64("id", 123456))
+	Named("app").Info("appppppp", zap.String("aaa", "bbbbb"))
+	GetLoggerWithFileName("kafka").Info("hello kafka", zap.String("trace", "bbbb"))
+	GetLogger().With(zap.String("sub", "t")).Info("hhhh")
+	GetLoggerWithFileName("kafka").Named("consumer").Info("hello consumer")
 }

@@ -1,41 +1,83 @@
 package log
 
-// Info is info level
-func Info(args ...interface{}) {
-	GetLogger().Info(args...)
+import (
+	"go.uber.org/zap"
+)
+
+func Named(s string) *Logger {
+	return GetLogger().Named(s)
 }
 
-// Warn is warning level
-func Warn(args ...interface{}) {
-	GetLogger().Warn(args...)
+func With(field ...zap.Field) *Logger {
+	return GetLogger().With(field...)
 }
 
-// Error is error level
-func Error(args ...interface{}) {
-	GetLogger().Error(args...)
+func Debug(msg string, field ...zap.Field) {
+	GetLogger().Debug(msg, field...)
 }
 
-// Debug is debug level
-func Debug(args ...interface{}) {
-	GetLogger().Debug(args...)
+func Info(msg string, field ...zap.Field) {
+	GetLogger().Info(msg, field...)
 }
 
-// Infof is format info level
-func Infof(fmt string, args ...interface{}) {
-	GetLogger().Infof(fmt, args...)
+func Warn(msg string, field ...zap.Field) {
+	GetLogger().Warn(msg, field...)
 }
 
-// Warnf is format warning level
-func Warnf(fmt string, args ...interface{}) {
-	GetLogger().Warnf(fmt, args...)
+func Error(msg string, field ...zap.Field) {
+	GetLogger().Error(msg, field...)
 }
 
-// Errorf is format error level
-func Errorf(fmt string, args ...interface{}) {
-	GetLogger().Errorf(fmt, args...)
+func DPanic(msg string, field ...zap.Field) {
+	GetLogger().DPanic(msg, field...)
 }
 
-// Debugf is format debug level
-func Debugf(fmt string, args ...interface{}) {
-	GetLogger().Debugf(fmt, args...)
+func Panic(msg string, field ...zap.Field) {
+	GetLogger().Panic(msg, field...)
+}
+
+func Fatal(msg string, field ...zap.Field) {
+	GetLogger().Fatal(msg, field...)
+}
+
+func (log *Logger) Named(s string) *Logger {
+	log.l = log.l.Named(s)
+	return log
+}
+
+func (log *Logger) With(field ...zap.Field) *Logger {
+	if len(field) == 0 {
+		return log
+	}
+
+	log.l = log.l.With(field...)
+	return log
+}
+
+func (log *Logger) Debug(msg string, field ...zap.Field) {
+	log.l.Debug(msg, field...)
+}
+
+func (log *Logger) Info(msg string, field ...zap.Field) {
+	log.l.Info(msg, field...)
+}
+
+func (log *Logger) Warn(msg string, field ...zap.Field) {
+	log.l.Warn(msg, field...)
+}
+
+func (log *Logger) Error(msg string, field ...zap.Field) {
+	log.l.Error(msg, field...)
+}
+
+func (log *Logger) DPanic(msg string, field ...zap.Field) {
+	log.l.DPanic(msg, field...)
+}
+
+func (log *Logger) Panic(msg string, field ...zap.Field) {
+	log.l.Panic(msg, field...)
+}
+
+func (log *Logger) Fatal(msg string, field ...zap.Field) {
+	log.l.Fatal(msg, field...)
 }

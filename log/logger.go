@@ -1,26 +1,30 @@
 package log
 
 import (
+	"context"
+	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"os"
 	"sync"
 
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 var (
 	logLock    sync.RWMutex
-	loggers    = make(map[string]Logger)
-	global     Logger
+	loggers    = make(map[string]*Logger)
+	global     *Logger
 	initialize bool
 )
 
 var levelMap = map[string]zapcore.Level{
-	"debug": zapcore.DebugLevel,
-	"info":  zapcore.InfoLevel,
-	"warn":  zapcore.WarnLevel,
-	"error": zapcore.ErrorLevel,
+	"debug":  zapcore.DebugLevel,
+	"info":   zapcore.InfoLevel,
+	"warn":   zapcore.WarnLevel,
+	"error":  zapcore.ErrorLevel,
+	"dpanic": zapcore.DPanicLevel,
+	"panic":  zapcore.PanicLevel,
+	"fatal":  zapcore.FatalLevel,
 }
 
 type GlobalConfig struct {
@@ -45,21 +49,8 @@ type ConfigBase struct {
 	ShowLineNumber bool
 }
 
-type BaseLogger struct {
-	Logger
-}
-
-// Logger is the interface for Logger types
-type Logger interface {
-	Info(args ...interface{})
-	Warn(args ...interface{})
-	Error(args ...interface{})
-	Debug(args ...interface{})
-
-	Infof(fmt string, args ...interface{})
-	Warnf(fmt string, args ...interface{})
-	Errorf(fmt string, args ...interface{})
-	Debugf(fmt string, args ...interface{})
+type Logger struct {
+	l *zap.Logger
 }
 
 // InitLogger is init global logger
@@ -98,7 +89,7 @@ func initLogger(config GlobalConfig) {
 		zapLogger = zapLogger.WithOptions(zap.AddCaller())
 	}
 	zap.ReplaceGlobals(zapLogger)
-	global = &BaseLogger{zapLogger.Sugar()}
+	global = &Logger{zapLogger}
 }
 
 func initChildLoggers(childs ...ChildConfig) {
@@ -113,11 +104,11 @@ func initChildLoggers(childs ...ChildConfig) {
 		}
 		hook := getHooks(config.LogFileName, config.MaxSize, config.MaxBackups, config.MaxAge, config.Compress)
 		childCore := zapcore.NewCore(encoder, zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(&hook)), logLevel)
-		child := zap.L().With(zap.String("childLogName", config.LoggerName))
+		child := zap.L().Named(config.LoggerName)
 		child = child.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
 			return childCore
 		}))
-		loggers[config.LoggerName] = &BaseLogger{child.Sugar()}
+		loggers[config.LoggerName] = &Logger{child}
 	}
 }
 
@@ -155,14 +146,26 @@ func getHooks(fileName string, maxSize, maxBackups, maxAge int, compress bool) l
 	}
 }
 
-func GetLogger() Logger {
+// GetLogger 获取全局Logger
+func GetLogger() *Logger {
 	logLock.RLock()
 	defer logLock.RUnlock()
 	return global
 }
 
-func GetLoggerWithName(name string) Logger {
+// GetLoggerWithName 根据自定义时定义的日志文件名获取日志Logger
+func GetLoggerWithFileName(name string) *Logger {
 	logLock.RLock()
 	defer logLock.RUnlock()
 	return loggers[name]
+}
+
+type logCtxKey struct{}
+
+func GetLoggerWitchCtx(ctx context.Context) *Logger {
+	log, ok := ctx.Value(logCtxKey{}).(*Logger)
+	if ok {
+		return log
+	}
+	return global
 }
