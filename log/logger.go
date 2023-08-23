@@ -160,10 +160,10 @@ func GetLoggerWithFileName(name string) *Logger {
 	return loggers[name]
 }
 
-type logCtxKey struct{}
+const logCtxKey = "log_with_context"
 
 func GetLoggerWitchCtx(ctx context.Context) *Logger {
-	log, ok := ctx.Value(logCtxKey{}).(*Logger)
+	log, ok := ctx.Value(logCtxKey).(*Logger)
 	if ok {
 		return log
 	}
