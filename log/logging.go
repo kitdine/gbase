@@ -31,6 +31,7 @@ var (
 	Int8        = zap.Int8
 	Int8p       = zap.Int8p
 	String      = zap.String
+	Strings     = zap.Strings
 	Stringp     = zap.Stringp
 	Uint        = zap.Uint
 	Uintp       = zap.Uintp
@@ -54,7 +55,7 @@ var (
 	Duration    = zap.Duration
 	Durationp   = zap.Durationp
 	Any         = zap.Any
-	NamedError  = zap.Error
+	Err         = zap.Error
 )
 
 func Named(s string) *Logger {
