@@ -86,7 +86,7 @@ func initLogger(config GlobalConfig) {
 	core := zapcore.NewCore(encoder, zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(&hook)), logLevel)
 	zapLogger := zap.New(core)
 	if config.ShowLineNumber {
-		zapLogger = zapLogger.WithOptions(zap.AddCaller())
+		zapLogger = zapLogger.WithOptions(zap.AddCaller(), zap.AddCallerSkip(1))
 	}
 	zap.ReplaceGlobals(zapLogger)
 	global = &Logger{zapLogger}
@@ -108,6 +108,9 @@ func initChildLoggers(childs ...ChildConfig) {
 		child = child.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
 			return childCore
 		}))
+		if config.ShowLineNumber {
+			child = child.WithOptions(zap.AddCaller(), zap.AddCallerSkip(1))
+		}
 		loggers[config.LoggerName] = &Logger{child}
 	}
 }
