@@ -54,6 +54,7 @@ var (
 	Duration    = zap.Duration
 	Durationp   = zap.Durationp
 	Any         = zap.Any
+	NamedError  = zap.Error
 )
 
 func Named(s string) *Logger {
