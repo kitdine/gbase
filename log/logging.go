@@ -5,11 +5,17 @@ import (
 )
 
 func Named(s string) *Logger {
-	return GetLogger().Named(s)
+	l := &Logger{
+		l: GetLogger().l,
+	}
+	return l.Named(s)
 }
 
 func With(field ...zap.Field) *Logger {
-	return GetLogger().With(field...)
+	l := &Logger{
+		l: GetLogger().l,
+	}
+	return l.With(field...)
 }
 
 func Debug(msg string, field ...zap.Field) {
