@@ -28,25 +28,31 @@ var levelMap = map[string]zapcore.Level{
 }
 
 type GlobalConfig struct {
-	Level       string
-	LogFileName string
+	Level         string
+	EnableFileLog bool
 	ConfigBase
+	FileLogConfig
 }
 
 type ChildConfig struct {
-	LoggerName  string
-	Level       string
-	LogFileName string
+	LoggerName    string
+	Level         string
+	EnableFileLog bool
 	ConfigBase
+	FileLogConfig
 }
 
 type ConfigBase struct {
-	MaxSize        int
-	MaxBackups     int
-	MaxAge         int
-	Compress       bool
 	JSONFormat     bool
 	ShowLineNumber bool
+}
+
+type FileLogConfig struct {
+	FileName   string
+	MaxSize    int
+	MaxBackups int
+	MaxAge     int
+	Compress   bool
 }
 
 type Logger struct {
@@ -81,9 +87,15 @@ func initLogger(config GlobalConfig) {
 	} else {
 		encoder = zapcore.NewConsoleEncoder(encoderConfig)
 	}
-	hook := getHooks(config.LogFileName, config.MaxSize, config.MaxBackups, config.MaxAge, config.Compress)
 
-	core := zapcore.NewCore(encoder, zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(&hook)), logLevel)
+	var core zapcore.Core
+	if config.EnableFileLog {
+		hook := getHooks(config.FileName, config.MaxSize, config.MaxBackups, config.MaxAge, config.Compress)
+		core = zapcore.NewCore(encoder, zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(&hook)), logLevel)
+	} else {
+		core = zapcore.NewCore(encoder, zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout)), logLevel)
+	}
+
 	zapLogger := zap.New(core)
 	if config.ShowLineNumber {
 		zapLogger = zapLogger.WithOptions(zap.AddCaller(), zap.AddCallerSkip(1))
@@ -102,8 +114,15 @@ func initChildLoggers(childs ...ChildConfig) {
 		} else {
 			encoder = zapcore.NewConsoleEncoder(encoderConfig)
 		}
-		hook := getHooks(config.LogFileName, config.MaxSize, config.MaxBackups, config.MaxAge, config.Compress)
-		childCore := zapcore.NewCore(encoder, zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(&hook)), logLevel)
+
+		var childCore zapcore.Core
+		if config.EnableFileLog {
+			hook := getHooks(config.FileName, config.MaxSize, config.MaxBackups, config.MaxAge, config.Compress)
+			childCore = zapcore.NewCore(encoder, zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(&hook)), logLevel)
+		} else {
+			childCore = zapcore.NewCore(encoder, zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout)), logLevel)
+		}
+
 		child := zap.L().Named(config.LoggerName)
 		child = child.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
 			return childCore
