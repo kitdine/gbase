@@ -68,6 +68,7 @@ func InitLogger(config GlobalConfig, childConfig ...ChildConfig) {
 	initChildLoggers(childConfig...)
 }
 
+// AddChildLogger 添加子logger对象
 func AddChildLogger(config ...ChildConfig) {
 	logLock.Lock()
 	defer logLock.Unlock()
@@ -78,6 +79,7 @@ func AddChildLogger(config ...ChildConfig) {
 	panic("your should init global logger first! Please call InitLogger() first")
 }
 
+// initLogger 初始化logger
 func initLogger(config GlobalConfig) {
 	logLevel := getLogLevel(config.Level)
 	encoderConfig := getEncoderConfig()
@@ -104,6 +106,7 @@ func initLogger(config GlobalConfig) {
 	global = &Logger{zapLogger}
 }
 
+// initChildLoggers 初始化子logger集合
 func initChildLoggers(childs ...ChildConfig) {
 	for _, config := range childs {
 		logLevel := getLogLevel(config.Level)
@@ -134,6 +137,7 @@ func initChildLoggers(childs ...ChildConfig) {
 	}
 }
 
+// getLogLevel 日志级别映射
 func getLogLevel(level string) zapcore.Level {
 	if zapLevel, ok := levelMap[level]; ok {
 		return zapLevel
@@ -141,6 +145,7 @@ func getLogLevel(level string) zapcore.Level {
 	return zapcore.InfoLevel
 }
 
+// getEncoderConfig 设置zap输出格式内容
 func getEncoderConfig() zapcore.EncoderConfig {
 	return zapcore.EncoderConfig{
 		TimeKey:        "time",
@@ -158,6 +163,7 @@ func getEncoderConfig() zapcore.EncoderConfig {
 	}
 }
 
+// getHooks 设置日志文件切割规则
 func getHooks(fileName string, maxSize, maxBackups, maxAge int, compress bool) lumberjack.Logger {
 	return lumberjack.Logger{
 		Filename:   fileName,   // 日志文件路径
@@ -175,19 +181,32 @@ func GetLogger() *Logger {
 	return global
 }
 
-// GetLoggerWithName 根据自定义时定义的日志文件名获取日志Logger
+// GetLoggerWithFileName 根据自定义时定义的日志文件名获取日志Logger
 func GetLoggerWithFileName(name string) *Logger {
 	logLock.RLock()
 	defer logLock.RUnlock()
 	return loggers[name]
 }
 
-const logCtxKey = "log_with_context"
+const ctxKey = "log_with_context"
 
-func GetLoggerWitchCtx(ctx context.Context) *Logger {
-	log, ok := ctx.Value(logCtxKey).(*Logger)
+// SetContextLogger 将logger通过context上下文进行传递，主要用于协程中特殊logger配置相关场景
+func SetContextLogger(ctx context.Context, logger *Logger) context.Context {
+	return context.WithValue(ctx, ctxKey, logger)
+}
+
+// GetContextLogger 从context上下文中获取logger对象
+func GetContextLogger(ctx context.Context) *Logger {
+	log, ok := ctx.Value(ctxKey).(*Logger)
 	if ok {
 		return log
 	}
 	return global
+}
+
+// GetLoggerWitchCtx 从context上下文中获取logger对象
+//
+// Deprecated: Users should use GetContextLogger instead.
+func GetLoggerWitchCtx(ctx context.Context) *Logger {
+	return GetContextLogger(ctx)
 }
