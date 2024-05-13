@@ -7,23 +7,31 @@ import (
 
 func TestLogger(t *testing.T) {
 	base := ConfigBase{
-		MaxSize:        500,  // 但文件大小，单位：MB
-		MaxBackups:     100,  // 备份文件个数
-		MaxAge:         14,   // 最大保存天数
-		Compress:       true, // 备份文件是否压缩保存
 		JSONFormat:     true, // 日志打印格式，是否启用json 格式
 		ShowLineNumber: true, // 是否显示打印位置信息，类、行号等
 	}
 	config := GlobalConfig{
-		Level:       "info",          // 日志级别
-		LogFileName: "logs/root.log", // 日志文件 全路径名
-		ConfigBase:  base,
+		Level:      "info", // 日志级别
+		ConfigBase: base,
+		FileLogConfig: FileLogConfig{
+			FileName:   "logs/root.log",
+			MaxSize:    500,  // 但文件大小，单位：MB
+			MaxBackups: 100,  // 备份文件个数
+			MaxAge:     14,   // 最大保存天数
+			Compress:   true, // 备份文件是否压缩保存
+		},
 	}
 	kafka := ChildConfig{
-		LoggerName:  "kafka",
-		Level:       "info",
-		LogFileName: "logs/kafka.log",
-		ConfigBase:  base,
+		LoggerName: "kafka",
+		Level:      "info",
+		ConfigBase: base,
+		FileLogConfig: FileLogConfig{
+			FileName:   "logs/kafka.log",
+			MaxSize:    500,  // 但文件大小，单位：MB
+			MaxBackups: 100,  // 备份文件个数
+			MaxAge:     14,   // 最大保存天数
+			Compress:   true, // 备份文件是否压缩保存
+		},
 	}
 	InitLogger(config, kafka)
 
@@ -32,4 +40,14 @@ func TestLogger(t *testing.T) {
 	GetLoggerWithFileName("kafka").Info("hello kafka", zap.String("trace", "bbbb"))
 	GetLogger().With(zap.String("sub", "t")).Info("hhhh")
 	GetLoggerWithFileName("kafka").Named("consumer").Info("hello consumer")
+	Debug("debug before")
+	SetGlobalLoggerInfoLevel(DebugLevel)
+	Debug("debug after")
+}
+
+func TestNoInit(t *testing.T) {
+	Info("hello world!")
+	Debug("debug before")
+	SetGlobalLoggerInfoLevel(DebugLevel)
+	Debug("debug after")
 }

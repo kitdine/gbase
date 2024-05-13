@@ -15,6 +15,7 @@ var (
 	loggers    = make(map[string]*Logger)
 	global     *Logger
 	initialize bool
+	atom       zap.AtomicLevel
 )
 
 var levelMap = map[string]zapcore.Level{
@@ -26,6 +27,38 @@ var levelMap = map[string]zapcore.Level{
 	"panic":  zapcore.PanicLevel,
 	"fatal":  zapcore.FatalLevel,
 }
+
+// A Level is a logging priority. Higher levels are more important.
+type Level zapcore.Level
+
+const (
+	// DebugLevel logs are typically voluminous, and are usually disabled in
+	// production.
+	DebugLevel Level = iota - 1
+	// InfoLevel is the default logging priority.
+	InfoLevel
+	// WarnLevel logs are more important than Info, but don't need individual
+	// human review.
+	WarnLevel
+	// ErrorLevel logs are high-priority. If an application is running smoothly,
+	// it shouldn't generate any error-level logs.
+	ErrorLevel
+	// DPanicLevel logs are particularly important errors. In development the
+	// logger panics after writing the message.
+	DPanicLevel
+	// PanicLevel logs a message, then panics.
+	PanicLevel
+	// FatalLevel logs a message, then calls os.Exit(1).
+	FatalLevel
+
+	_minLevel = DebugLevel
+	_maxLevel = FatalLevel
+
+	// InvalidLevel is an invalid value for Level.
+	//
+	// Core implementations may panic if they see messages of this level.
+	InvalidLevel = _maxLevel + 1
+)
 
 type GlobalConfig struct {
 	Level         string
@@ -82,6 +115,8 @@ func AddChildLogger(config ...ChildConfig) {
 // initLogger 初始化logger
 func initLogger(config GlobalConfig) {
 	logLevel := getLogLevel(config.Level)
+	atom = zap.NewAtomicLevel()
+	atom.SetLevel(logLevel)
 	encoderConfig := getEncoderConfig()
 	var encoder zapcore.Encoder
 	if config.JSONFormat {
@@ -93,9 +128,9 @@ func initLogger(config GlobalConfig) {
 	var core zapcore.Core
 	if config.EnableFileLog {
 		hook := getHooks(config.FileName, config.MaxSize, config.MaxBackups, config.MaxAge, config.Compress)
-		core = zapcore.NewCore(encoder, zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(&hook)), logLevel)
+		core = zapcore.NewCore(encoder, zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(&hook)), atom)
 	} else {
-		core = zapcore.NewCore(encoder, zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout)), logLevel)
+		core = zapcore.NewCore(encoder, zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout)), atom)
 	}
 
 	zapLogger := zap.New(core)
@@ -178,6 +213,17 @@ func getHooks(fileName string, maxSize, maxBackups, maxAge int, compress bool) l
 func GetLogger() *Logger {
 	logLock.RLock()
 	defer logLock.RUnlock()
+	if global == nil {
+		initLogger(GlobalConfig{
+			Level:         "info",
+			EnableFileLog: false,
+			ConfigBase: ConfigBase{
+				JSONFormat:     true,
+				ShowLineNumber: true,
+			},
+		})
+		initialize = true
+	}
 	return global
 }
 
@@ -209,4 +255,11 @@ func GetContextLogger(ctx context.Context) *Logger {
 // Deprecated: Users should use GetContextLogger instead.
 func GetLoggerWitchCtx(ctx context.Context) *Logger {
 	return GetContextLogger(ctx)
+}
+
+// SetGlobalLoggerInfoLevel 修改全局日志器的输出日志级别
+func SetGlobalLoggerInfoLevel(level Level) {
+	before := atom.String()
+	atom.SetLevel(zapcore.Level(level))
+	global.Info("changed log level success", String("before", before), String("after", atom.String()))
 }
