@@ -35,19 +35,19 @@ func TestLogger(t *testing.T) {
 	}
 	InitLogger(config, kafka)
 
-	Info("test", zap.String("trace", "aaa"), zap.Int64("id", 123456))
-	Named("app").Info("appppppp", zap.String("aaa", "bbbbb"))
+	GetLogger().Info("test", zap.String("trace", "aaa"), zap.Int64("id", 123456))
+	GetLogger().Named("app").Info("appppppp", zap.String("aaa", "bbbbb"))
 	GetLoggerWithFileName("kafka").Info("hello kafka", zap.String("trace", "bbbb"))
 	GetLogger().With(zap.String("sub", "t")).Info("hhhh")
 	GetLoggerWithFileName("kafka").Named("consumer").Info("hello consumer")
-	Debug("debug before")
+	GetLogger().Debug("debug before")
 	SetGlobalLoggerInfoLevel(DebugLevel)
-	Debug("debug after")
+	GetLogger().Debug("debug after")
 }
 
 func TestNoInit(t *testing.T) {
-	Info("hello world!")
-	Debug("debug before")
+	GetLogger().Info("hello world!")
+	GetLogger().Debug("debug before")
 	SetGlobalLoggerInfoLevel(DebugLevel)
-	Debug("debug after")
+	GetLogger().Debug("debug after")
 }

@@ -58,48 +58,6 @@ var (
 	Err         = zap.Error
 )
 
-func Named(s string) *Logger {
-	l := &Logger{
-		l: GetLogger().l,
-	}
-	return l.Named(s)
-}
-
-func With(fields ...Field) *Logger {
-	l := &Logger{
-		l: GetLogger().l,
-	}
-	return l.With(fields...)
-}
-
-func Debug(msg string, fields ...Field) {
-	GetLogger().Debug(msg, fields...)
-}
-
-func Info(msg string, fields ...Field) {
-	GetLogger().Info(msg, fields...)
-}
-
-func Warn(msg string, fields ...Field) {
-	GetLogger().Warn(msg, fields...)
-}
-
-func Error(msg string, fields ...Field) {
-	GetLogger().Error(msg, fields...)
-}
-
-func DPanic(msg string, fields ...Field) {
-	GetLogger().DPanic(msg, fields...)
-}
-
-func Panic(msg string, fields ...Field) {
-	GetLogger().Panic(msg, fields...)
-}
-
-func Fatal(msg string, fields ...Field) {
-	GetLogger().Fatal(msg, fields...)
-}
-
 func (log *Logger) Named(s string) *Logger {
 	log.l = log.l.Named(s)
 	return log
