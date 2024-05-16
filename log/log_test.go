@@ -51,3 +51,9 @@ func TestNoInit(t *testing.T) {
 	SetGlobalLoggerInfoLevel(DebugLevel)
 	GetLogger().Debug("debug after")
 }
+
+func TestNamed(t *testing.T) {
+	GetLogger().Info("start")
+	GetLogger().Named("test1").Info("test1")
+	GetLogger().Named("test2").Info("test2")
+}

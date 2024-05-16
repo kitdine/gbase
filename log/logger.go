@@ -263,3 +263,8 @@ func SetGlobalLoggerInfoLevel(level Level) {
 	atom.SetLevel(zapcore.Level(level))
 	global.Info("changed log level success", String("before", before), String("after", atom.String()))
 }
+
+func (log *Logger) clone() *Logger {
+	clone := *log
+	return &clone
+}

@@ -59,8 +59,9 @@ var (
 )
 
 func (log *Logger) Named(s string) *Logger {
-	log.l = log.l.Named(s)
-	return log
+	l := log.clone()
+	l.l = log.l.Named(s)
+	return l
 }
 
 func (log *Logger) With(fields ...Field) *Logger {
@@ -68,8 +69,9 @@ func (log *Logger) With(fields ...Field) *Logger {
 		return log
 	}
 
-	log.l = log.l.With(fields...)
-	return log
+	l := log.clone()
+	l.l = log.l.With(fields...)
+	return l
 }
 
 func (log *Logger) Debug(msg string, fields ...Field) {
