@@ -3,6 +3,7 @@ package log
 import (
 	"context"
 	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"os"
 	"sync"
@@ -267,4 +268,15 @@ func SetGlobalLoggerInfoLevel(level Level) {
 func (log *Logger) clone() *Logger {
 	clone := *log
 	return &clone
+}
+
+func SettingTestBuffer(buffer *zaptest.Buffer) {
+	l := GetLogger()
+	global.l = l.l.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
+		return zapcore.NewCore(
+			zapcore.NewJSONEncoder(getEncoderConfig()),
+			zapcore.AddSync(buffer),
+			zap.DebugLevel,
+		)
+	}))
 }

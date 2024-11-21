@@ -2,6 +2,8 @@ package log
 
 import (
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
+	"strings"
 	"testing"
 )
 
@@ -56,4 +58,35 @@ func TestNamed(t *testing.T) {
 	GetLogger().Info("start")
 	GetLogger().Named("test1").Info("test1")
 	GetLogger().Named("test2").Info("test2")
+}
+
+func TestSettingTestBuffer(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{"BasicBuffer"},
+		{"ReuseBuffer"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buffer := &zaptest.Buffer{}
+			SettingTestBuffer(buffer)
+
+			logger := GetLogger()
+			logger.Info("test message")
+
+			output := buffer.Stripped()
+			if tt.name == "BasicBuffer" && !strings.Contains(output, "test message") {
+				t.Errorf("Unexpected output: %s", output)
+			}
+
+			buffer.Reset()
+			logger.Info("another test message")
+
+			if tt.name == "ReuseBuffer" && !strings.Contains(output, "another test message") {
+				t.Errorf("Unexpected output after buffer reuse: %s", output)
+			}
+		})
+	}
 }
