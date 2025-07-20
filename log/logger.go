@@ -251,13 +251,6 @@ func GetContextLogger(ctx context.Context) *Logger {
 	return global
 }
 
-// GetLoggerWitchCtx 从context上下文中获取logger对象
-//
-// Deprecated: Users should use GetContextLogger instead.
-func GetLoggerWitchCtx(ctx context.Context) *Logger {
-	return GetContextLogger(ctx)
-}
-
 // SetGlobalLoggerInfoLevel 修改全局日志器的输出日志级别
 func SetGlobalLoggerInfoLevel(level Level) {
 	before := atom.String()
